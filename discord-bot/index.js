@@ -1,6 +1,5 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits } = require("discord.js");
-const axios = require("axios");
 
 const client = new Client({
   intents: [
@@ -22,9 +21,8 @@ client.on("messageCreate", async (message) => {
 
   if (botMentioned) {
     try {
-      const recentMessages = await message.channel.messages.fetch({
-        limit: 20,
-      });
+      const recentMessages = await message.channel.messages.fetch({ limit: 20 });
+
       const chatHistory = [...recentMessages.values()]
         .reverse()
         .map((msg) => `${msg.author.username}: ${msg.content}`);
@@ -37,9 +35,16 @@ client.on("messageCreate", async (message) => {
 
       console.log("Sending to n8n:", payload);
 
-      const response = await axios.post(process.env.N8N_WEBHOOK_URL, payload);
+      const res = await fetch(process.env.N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      const reply = response?.data?.summary || "No summary returned.";
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+
+      const data = await res.json();
+      const reply = data?.summary || "No summary returned.";
       await message.channel.send(`${reply}`);
     } catch (error) {
       console.error("Error:", error.message);
