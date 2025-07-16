@@ -21,7 +21,9 @@ client.on("messageCreate", async (message) => {
 
   if (botMentioned) {
     try {
-      const recentMessages = await message.channel.messages.fetch({ limit: 20 });
+      const recentMessages = await message.channel.messages.fetch({
+        limit: 20,
+      });
 
       const chatHistory = [...recentMessages.values()]
         .reverse()
@@ -30,11 +32,13 @@ client.on("messageCreate", async (message) => {
       const payload = {
         userQuery: message.content,
         triggerUser: message.author.username,
-        messages: chatHistory,
+        messages: [...recentMessages.values()]
+          .reverse()
+          .map((msg) => `${msg.author.username}: ${msg.content}`),
       };
 
       console.log("Sending to n8n:", payload);
-
+      console.log("Payload:", JSON.stringify(payload, null, 2));
       const res = await fetch(process.env.N8N_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

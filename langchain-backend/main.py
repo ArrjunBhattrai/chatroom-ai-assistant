@@ -1,24 +1,34 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
-from langchain_community.chat_models import ChatOllama
-from langchain.schema.messages import HumanMessage
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
+from models.chat import ChatPayload
+from chains.summarizer_chain import summarize_chat
 
 app = FastAPI()
 
-class Payload(BaseModel):
-    userQuery: str
-    triggerUser: str
-    messages: list[str]
+# Logging raw body
+@app.middleware("http")
+async def log_request(request: Request, call_next):
+    body = await request.body()
+    print("📥 Raw Request Body:\n", body.decode())
+    return await call_next(request)
+
+# Global error handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print("❌ Global Error:", repr(exc))
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"error": str(exc)}
+    )
 
 @app.post("/process")
-async def process_chat(payload: Payload):
-    history = "\n".join(payload.messages)
-
-    prompt = f"""This is the chat log:\n{history}\n\n
-    The user '{payload.triggerUser}' asked: "{payload.userQuery}".\n
-    Provide a relevant summary, follow-up, or answer as appropriate.
-    """
-
-    llm = ChatOllama(model="llama3")
-    response = llm.invoke([HumanMessage(content=prompt)])
-    return {"summary": response.content}
+async def process_chat(payload: ChatPayload):
+    try:
+        result = summarize_chat(payload)
+        return result
+    except Exception as e:
+        print("🔥 Summarizer Error:", e)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": str(e)}
+        )
