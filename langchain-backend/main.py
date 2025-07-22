@@ -9,13 +9,13 @@ app = FastAPI()
 @app.middleware("http")
 async def log_request(request: Request, call_next):
     body = await request.body()
-    print("📥 Raw Request Body:\n", body.decode())
+    print("Raw Request Body:\n", body.decode())
     return await call_next(request)
 
 # Global error handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    print("❌ Global Error:", repr(exc))
+    print("Global Error:", repr(exc))
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"error": str(exc)}
@@ -25,9 +25,12 @@ async def global_exception_handler(request: Request, exc: Exception):
 async def process_chat(payload: ChatPayload):
     try:
         result = summarize_chat(payload)
-        return result
+
+        print("Final JSON Response to send:", { "summary": result["summary"] })
+        return JSONResponse(content={ "summary": result["summary"] })
+
     except Exception as e:
-        print("🔥 Summarizer Error:", e)
+        print("Summarizer Error:", e)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": str(e)}

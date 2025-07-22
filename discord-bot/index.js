@@ -10,7 +10,7 @@ const client = new Client({
 });
 
 client.once("ready", () => {
-  console.log(`Bot is online as ${client.user.tag}`);
+  console.log(`Assistant is online as ${client.user.tag}`);
 });
 
 client.on("messageCreate", async (message) => {
@@ -22,23 +22,25 @@ client.on("messageCreate", async (message) => {
   if (botMentioned) {
     try {
       const recentMessages = await message.channel.messages.fetch({
-        limit: 20,
+        limit: 30,
       });
 
       const chatHistory = [...recentMessages.values()]
-        .reverse()
-        .map((msg) => `${msg.author.username}: ${msg.content}`);
+      .reverse()
+      .map((msg) => ({
+        username: msg.author.username,
+        content: msg.content,
+        timestamp: msg.createdAt,
+        id: msg.id,
+      }));
 
       const payload = {
         userQuery: message.content,
         triggerUser: message.author.username,
-        messages: [...recentMessages.values()]
-          .reverse()
-          .map((msg) => `${msg.author.username}: ${msg.content}`),
+        messages: chatHistory,
       };
 
       console.log("Sending to n8n:", payload);
-      console.log("Payload:", JSON.stringify(payload, null, 2));
       const res = await fetch(process.env.N8N_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,7 +49,19 @@ client.on("messageCreate", async (message) => {
 
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
 
-      const data = await res.json();
+      const text = await res.text();
+      console.log("Raw response text:", text);
+
+      let data;
+      try {
+        data = JSON.parse(text);
+        console.log("Parsed JSON:", data);
+      } catch (e) {
+        console.error("JSON parsing failed:", e.message);
+        await message.channel.send("Backend response was not valid JSON.");
+        return;
+      }
+
       const reply = data?.summary || "No summary returned.";
       await message.channel.send(`${reply}`);
     } catch (error) {
