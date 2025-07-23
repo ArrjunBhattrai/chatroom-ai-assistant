@@ -1,11 +1,11 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from models.chat import ChatPayload
-from chains.summarizer_chain import summarize_chat
+from orchestrator import process_chat_intelligently  
 
 app = FastAPI()
 
-# Logging raw body
+# Logs raw request body
 @app.middleware("http")
 async def log_request(request: Request, call_next):
     body = await request.body()
@@ -21,13 +21,14 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"error": str(exc)}
     )
 
+# POST endpoint that uses the full multi-chain system
 @app.post("/process")
 async def process_chat(payload: ChatPayload):
     try:
-        result = summarize_chat(payload)
+        result = process_chat_intelligently(payload)
 
-        print("Final JSON Response to send:", { "summary": result["summary"] })
-        return JSONResponse(content={ "summary": result["summary"] })
+        print("Final JSON Response to send:", result)
+        return JSONResponse(content=result)
 
     except Exception as e:
         print("Summarizer Error:", e)

@@ -25,9 +25,7 @@ client.on("messageCreate", async (message) => {
         limit: 30,
       });
 
-      const chatHistory = [...recentMessages.values()]
-      .reverse()
-      .map((msg) => ({
+      const chatHistory = [...recentMessages.values()].reverse().map((msg) => ({
         username: msg.author.username,
         content: msg.content,
         timestamp: msg.createdAt,
@@ -41,6 +39,7 @@ client.on("messageCreate", async (message) => {
       };
 
       console.log("Sending to n8n:", payload);
+
       const res = await fetch(process.env.N8N_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,11 +61,41 @@ client.on("messageCreate", async (message) => {
         return;
       }
 
-      const reply = data?.summary || "No summary returned.";
-      await message.channel.send(`${reply}`);
+      // Format response nicely
+      let replyParts = [];
+
+      if (data.summary) {
+        replyParts.push(`**Summary**:\n${data.summary}`);
+      }
+      if (data.tasks) {
+        replyParts.push(`**Tasks**:\n${data.tasks}`);
+      }
+      if (data.questions) {
+        replyParts.push(`**Questions**:\n${data.questions}`);
+      }
+      if (data.decisions) {
+        replyParts.push(`**Decisions**:\n${data.decisions}`);
+      }
+      if (data.deadlines) {
+        replyParts.push(`**Deadlines**:\n${data.deadlines}`);
+      }
+      if (data.mentions) {
+        replyParts.push(`**Mentions**:\n${data.mentions}`);
+      }
+      if (data.followups) {
+        replyParts.push(`**Follow-Ups**:\n${data.followups}`);
+      }
+
+      let reply = replyParts.join("\n\n");
+
+      if (reply.length > 2000) {
+        reply = reply.slice(0, 1990) + "\n...[truncated]";
+      }
+
+      await message.channel.send(reply || "No relevant info found.");
     } catch (error) {
       console.error("Error:", error.message);
-      message.channel.send("AI Assistant ran into an error.");
+      await message.channel.send("AI Assistant ran into an error.");
     }
   }
 });
