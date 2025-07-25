@@ -16,6 +16,24 @@ client.once("ready", () => {
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
+  try {
+    const storePayload = {
+      message_id: message.id,
+      username: message.author.username,
+      channel: message.channel.name || "DM",
+      message: message.content,
+      timestamp: message.createdAt.toISOString(),
+    };
+
+    await fetch("http://localhost:8000/storeMessage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(storePayload),
+    });
+  } catch (e) {
+    console.error("Failed to send to /storeMessage:", e.message);
+  }
+
   const botMentioned =
     message.mentions.has(client.user) || message.content.startsWith("!ai");
 
