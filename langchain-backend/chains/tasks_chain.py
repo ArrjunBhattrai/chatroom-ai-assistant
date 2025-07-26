@@ -1,26 +1,29 @@
-from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain_community.chat_models import ChatOllama
-from models.chat import ChatPayload
+from langchain_core.prompts import ChatPromptTemplate
 
 llm = ChatOllama(model="llama3")
 
-# 🧠 Prompt to extract tasks from chat
+# Prompt to extract tasks
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant that extracts tasks assigned in a conversation."),
+    ("system", "You are an assistant that identifies tasks assigned or discussed."),
     ("human", """
-Here is the recent chat log:
-{chat_log}
+User **{username}** asked: {question}
 
-List all tasks or action items mentioned in this conversation.
-If none, say "No tasks found."
-Return them as a plain list of bullet points or a comma-separated string.
-Avoid markdown formatting.
+Here is the related conversation context:
+{context}
+
+List all tasks, responsibilities, or action items mentioned in this discussion.
+If none, return "No tasks found."
+
+Output should be plain text bullet points or a comma-separated list.
+Avoid markdown and extra formatting.
 """)
 ])
 
 chain = LLMChain(llm=llm, prompt=prompt_template)
 
+# Handles different LLM outputs
 def extract_tasks_from_output(output) -> str:
     if isinstance(output, str):
         return output.strip()
@@ -36,18 +39,22 @@ def extract_tasks_from_output(output) -> str:
 
     return "No tasks found."
 
-def extract_tasks(payload: ChatPayload) -> dict:
-    chat_log = "\n".join(f"{msg.username}: {msg.content}" for msg in payload.messages)
-
+# Entry point
+def extract_tasks(question: str, context: str, username: str) -> dict:
     try:
-        llm_output = chain.invoke({ "chat_log": chat_log })
-        tasks = extract_tasks_from_output(llm_output)
+        output = chain.invoke({
+            "question": question,
+            "context": context,
+            "username": username
+        })
 
-        if not tasks:
-            raise ValueError("LLM did not return any tasks.")
+        tasks = extract_tasks_from_output(output)
 
-        return { "tasks": tasks }
+        if not tasks or len(tasks.strip()) < 5:
+            raise ValueError("LLM did not return valid tasks.")
+
+        return {"tasks": tasks}
 
     except Exception as e:
         print("Task extraction error:", e)
-        return { "tasks": "Could not extract tasks due to an error." }
+        return {"tasks": "Could not extract tasks."}

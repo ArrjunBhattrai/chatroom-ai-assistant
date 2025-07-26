@@ -1,33 +1,31 @@
-from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain_community.chat_models import ChatOllama
-from models.chat import ChatPayload
+from langchain_core.prompts import ChatPromptTemplate
 
 llm = ChatOllama(model="llama3")
 
-# 🧠 Prompt to extract questions asked to the user
+# Prompt to extract questions aimed at a user
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant that extracts questions asked to a specific user in a conversation."),
+    ("system", "You're an assistant that extracts questions directed at a specific user."),
     ("human", """
-Here is the recent chat log:
-{chat_log}
+User **{username}** asked: {question}
 
-The user you're assisting is: {trigger_user}
+Here is the relevant discussion context:
+{context}
 
-Identify all questions that were directly or indirectly asked to this user.
+Identify all questions that were directly or indirectly asked to **{username}**.
 A question is valid if:
-- It directly mentions the user with @tag
-- It includes their username in the sentence
-- Or it's clearly aimed at them in context
+- It uses @username or mentions them
+- It's clearly aimed at them based on context
 
-Only return the actual question texts (not usernames or metadata).
-If there are no such questions, say "No questions found."
-Avoid markdown or formatting.
+Return only the exact question texts. Avoid metadata, markdown, or formatting.
+If none found, return "No questions found."
 """)
 ])
 
 chain = LLMChain(llm=llm, prompt=prompt_template)
 
+# Extractor for questions
 def extract_questions_from_output(output) -> str:
     if isinstance(output, str):
         return output.strip()
@@ -43,22 +41,22 @@ def extract_questions_from_output(output) -> str:
 
     return "No questions found."
 
-def extract_questions(payload: ChatPayload) -> dict:
-    chat_log = "\n".join(f"{msg.username}: {msg.content}" for msg in payload.messages)
-
+# Entry point
+def extract_questions(question: str, context: str, username: str) -> dict:
     try:
-        llm_output = chain.invoke({
-            "chat_log": chat_log,
-            "trigger_user": payload.triggerUser
+        output = chain.invoke({
+            "question": question,
+            "context": context,
+            "username": username
         })
 
-        questions = extract_questions_from_output(llm_output)
+        questions = extract_questions_from_output(output)
 
-        if not questions:
-            raise ValueError("LLM did not return any questions.")
+        if not questions or len(questions.strip()) < 5:
+            raise ValueError("LLM did not return valid questions.")
 
-        return { "questions": questions }
+        return {"questions": questions}
 
     except Exception as e:
         print("Question extraction error:", e)
-        return { "questions": "Could not extract questions due to an error." }
+        return {"questions": "Could not extract questions."}

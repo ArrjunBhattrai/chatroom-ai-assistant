@@ -1,26 +1,26 @@
 from langchain.chains import LLMChain
 from langchain_community.chat_models import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
-from models.chat import ChatPayload
 
 llm = ChatOllama(model="llama3")
 
-# 🧠 Prompt to extract user mentions
+# Prompt to detect user mentions
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "You're an AI that identifies when a specific user is mentioned in a conversation."),
+    ("system", "You're an AI that identifies if a specific user was mentioned in a conversation."),
     ("human", """
-Here is the chat log:
-{chat_log}
+User **{username}** asked: {question}
 
-Was the user '{trigger_user}' mentioned explicitly or indirectly in this discussion?
-Return any mentions or references with short context, as plain text bullet points.
-Do not include explanations or markdown.
+Here is the relevant chat context:
+{context}
+
+Was **{username}** explicitly or implicitly mentioned in this discussion?
+Return all relevant references as plain text bullet points. Avoid markdown and explanations.
 """)
 ])
 
 chain = LLMChain(llm=llm, prompt=prompt_template)
 
-# ✅ Output extractor for mentions
+# Extract mention text cleanly
 def extract_mentions_text(output) -> str:
     if isinstance(output, str):
         return output.strip()
@@ -36,14 +36,13 @@ def extract_mentions_text(output) -> str:
 
     return "Mentions could not be extracted."
 
-# 🚀 Main function to invoke the mentions chain
-def extract_mentions(payload: ChatPayload) -> dict:
-    chat_log = "\n".join(f"{m.username}: {m.content}" for m in payload.messages)
-
+# Main function
+def extract_mentions(question: str, context: str, username: str) -> dict:
     try:
         output = chain.invoke({
-            "chat_log": chat_log,
-            "trigger_user": payload.triggerUser
+            "question": question,
+            "context": context,
+            "username": username
         })
 
         mentions = extract_mentions_text(output)

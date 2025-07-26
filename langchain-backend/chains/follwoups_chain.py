@@ -1,26 +1,26 @@
 from langchain.chains import LLMChain
 from langchain_community.chat_models import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
-from models.chat import ChatPayload
 
 llm = ChatOllama(model="llama3")
 
-# 🧠 Prompt for follow-up suggestions
+# RAG-based prompt for follow-up suggestions
 prompt_template = ChatPromptTemplate.from_messages([
     ("system", "You're an AI that suggests follow-up actions based on team discussions."),
     ("human", """
-Here is the chat log:
-{chat_log}
+User **{username}** asked: {question}
 
-Based on this discussion, suggest next steps or follow-up actions.
+Relevant discussion context:
+{context}
 
-Return the follow-ups as plain text bullet points. Do not include explanations or markdown formatting.
+Based on this, suggest actionable next steps or follow-up actions.
+Return them as plain text bullet points only (no markdown, no explanations).
 """)
 ])
 
 chain = LLMChain(llm=llm, prompt=prompt_template)
 
-# 🧪 Output extractor (handles different output types)
+# Output parser
 def extract_followup_text(output) -> str:
     if isinstance(output, str):
         return output.strip()
@@ -36,12 +36,15 @@ def extract_followup_text(output) -> str:
 
     return "Could not extract follow-up actions."
 
-# 🚀 Main entry point for chain
-def extract_followups(payload: ChatPayload) -> dict:
-    chat_log = "\n".join(f"{m.username}: {m.content}" for m in payload.messages)
-
+# Main callable
+def extract_followups(question: str, context: str, username: str) -> dict:
     try:
-        output = chain.invoke({"chat_log": chat_log})
+        output = chain.invoke({
+            "question": question,
+            "context": context,
+            "username": username
+        })
+
         followups = extract_followup_text(output)
 
         if not followups or len(followups.strip()) < 5:

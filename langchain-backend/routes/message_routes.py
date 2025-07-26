@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from services.message_service import save_message
+from chroma.vector_store import add_message_to_vector_store
 
 router = APIRouter()
 
@@ -13,6 +14,7 @@ class MessagePayload(BaseModel):
 
 @router.post("/storeMessage")
 def store_message(payload: MessagePayload):
+    # Save to PostgreSQL
     save_message(
         message_id=payload.message_id,
         username=payload.username,
@@ -20,4 +22,13 @@ def store_message(payload: MessagePayload):
         message=payload.message,
         timestamp=payload.timestamp
     )
-    return {"status": "stored"}
+
+    add_message_to_vector_store(
+        text=payload.message,
+        metadata={
+            "username": payload.username,
+            "channel": payload.channel,
+            "timestamp": payload.timestamp,
+        }
+    )
+    return {"status": "Message stored and embedded"}

@@ -8,7 +8,7 @@ intent_prompt = PromptTemplate.from_template("""
 The user asked: "{query}"
 
 Identify what types of information they are requesting.
-Valid options: summary, tasks, questions, decisions, deadlines, mentions.
+Valid options: summary, tasks, questions, decisions, deadlines, mentions, followups.
 
 Respond with a comma-separated list using only the above options.
 Do not explain.

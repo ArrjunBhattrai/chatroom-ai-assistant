@@ -1,25 +1,26 @@
 from langchain.chains import LLMChain
 from langchain_community.chat_models import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
-from models.chat import ChatPayload
 
 llm = ChatOllama(model="llama3")
 
-# 🧠 Prompt to extract decisions
+# Prompt updated for RAG context
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "You're an AI that extracts clear decisions made in a conversation."),
+    ("system", "You are an AI that extracts important decisions made during team discussions."),
     ("human", """
-Here is the chat log:
-{chat_log}
+User **{username}** asked: {question}
 
-Identify and list any decisions that were made during this discussion.
-Return them as plain text bullet points. Do not include markdown or explanations.
+Relevant discussion context:
+{context}
+
+Identify all clear decisions made during this discussion.
+Return them as plain text bullet points, no markdown or explanation.
 """)
 ])
 
 chain = LLMChain(llm=llm, prompt=prompt_template)
 
-# ✅ Extract decision text from possibly nested LLM response
+# Output cleaner
 def extract_decision_text(output) -> str:
     if isinstance(output, str):
         return output.strip()
@@ -35,12 +36,15 @@ def extract_decision_text(output) -> str:
 
     return "Decisions could not be extracted."
 
-# 🚀 Main handler function
-def extract_decisions(payload: ChatPayload) -> dict:
-    chat_log = "\n".join(f"{m.username}: {m.content}" for m in payload.messages)
-
+# Main handler
+def extract_decisions(question: str, context: str, username: str) -> dict:
     try:
-        output = chain.invoke({ "chat_log": chat_log })
+        output = chain.invoke({
+            "question": question,
+            "context": context,
+            "username": username
+        })
+
         decisions = extract_decision_text(output)
 
         if not decisions or len(decisions.strip()) < 5:

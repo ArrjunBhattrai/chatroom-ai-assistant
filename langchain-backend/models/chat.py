@@ -11,4 +11,4 @@ class Message(BaseModel):
 class ChatPayload(BaseModel):
     userQuery: str
     triggerUser: str
-    messages: List[Message]
+    channel: str                     

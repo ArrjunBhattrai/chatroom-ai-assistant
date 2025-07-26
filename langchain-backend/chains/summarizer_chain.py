@@ -5,12 +5,14 @@ from models.chat import ChatPayload
 
 llm = ChatOllama(model="llama3")
 
-# 🧠 Prompt to get plain text summary
+# Prompt to get plain text summary
 prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant that summarizes conversations."),
+    ("system", "You are a helpful assistant that summarizes chat conversations for users."),
     ("human", """
-Here is the recent chat log:
-{chat_log}
+User question: {question}
+
+Here is the related context:
+{context}
 
 Summarize the conversation in 3-5 sentences.
 Avoid markdown, bullet points, or formatting.
@@ -35,11 +37,13 @@ def extract_summary(output) -> str:
 
     return "Summary could not be generated."
 
-def summarize_chat(payload: ChatPayload) -> dict:
-    chat_log = "\n".join(f"{msg.username}: {msg.content}" for msg in payload.messages)
-
+def summarize_chat(question: str, context: str) -> dict:
     try:
-        llm_output = chain.invoke({ "chat_log": chat_log })
+        llm_output = chain.invoke({
+            "question": question,
+            "context": context
+        })
+
         summary = extract_summary(llm_output)
 
         if not summary or len(summary) < 5:
