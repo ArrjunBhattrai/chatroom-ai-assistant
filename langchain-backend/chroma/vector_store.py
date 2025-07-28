@@ -1,10 +1,10 @@
-from langchain.vectorstores import Chroma
-from langchain.embeddings import SentenceTransformerEmbeddings
+from langchain_community.vectorstores import Chroma
 from langchain.schema import Document
+from langchain_huggingface import HuggingFaceEmbeddings  
 import os
 
 # Create embedding model
-embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")  
 
 # Persistent directory for Chroma vector db
 CHROMA_DIR = "chroma_store"
@@ -21,7 +21,6 @@ def add_message_to_vector_store(text: str, metadata: dict):
     vector_store.add_documents([doc])
     vector_store.persist()
 
-
-def search_similar_messages(query: str, k=8):
+def search_similar_messages(query: str, k: int):
     """Performs semantic search over stored messages"""
     return vector_store.similarity_search(query, k=k)

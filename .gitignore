@@ -7,3 +7,6 @@ node_modules/
 .venv/
 __pycache__/
 *.pyc
+
+# Ignore chroma store
+chroma_store/

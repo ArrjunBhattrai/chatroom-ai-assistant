@@ -38,6 +38,7 @@ def extract_summary(output) -> str:
     return "Summary could not be generated."
 
 def summarize_chat(question: str, context: str) -> dict:
+    
     try:
         llm_output = chain.invoke({
             "question": question,
@@ -52,5 +53,7 @@ def summarize_chat(question: str, context: str) -> dict:
         return { "summary": summary }
 
     except Exception as e:
+        print(context)
+        print(question)
         print("Summarizer error:", e)
         return { "summary": "Could not generate summary due to an error." }

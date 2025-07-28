@@ -14,7 +14,6 @@ class MessagePayload(BaseModel):
 
 @router.post("/storeMessage")
 def store_message(payload: MessagePayload):
-    # Save to PostgreSQL
     save_message(
         message_id=payload.message_id,
         username=payload.username,

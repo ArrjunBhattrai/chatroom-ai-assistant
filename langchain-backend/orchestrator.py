@@ -19,46 +19,84 @@ def process_chat_intelligently(payload: ChatPayload) -> dict:
     channel = payload.channel
     timestamp = str(datetime.utcnow())
 
-    query_id = save_query(username=username, channel=channel, query_text=query_text, timestamp=timestamp)
-    similar_docs = find_similar_messages(query_text, k=5)
-    context = "\n".join([doc.page_content for doc in similar_docs])
+    query_id = save_query(
+        username=username,
+        channel=channel,
+        query_text=query_text,
+        timestamp=timestamp
+    )
 
-
-    intents = classify_intents(payload.userQuery)
+    intents = classify_intents(query_text)
     print("Detected intents:", intents)
 
     result = {}
 
-    input_data = {
-    "question": query_text,
-    "context": context,
-    "username": username,        
-    }
     if "summary" in intents:
-        summary_result = summarize_chat(input_data)
+        docs = find_similar_messages(f"summary: {query_text}", k=30)
+        context = "\n".join(doc.page_content for doc in docs)
+
+        summary_result = summarize_chat(
+            question=query_text,
+            context=context
+        )
+
         result["summary"] = summary_result.get("summary", "No summary found.")
 
     if "tasks" in intents:
-        tasks_result = extract_tasks(input_data)
+        docs = find_similar_messages(f"tasks: {query_text}", k=10)
+        context = "\n".join(doc.page_content for doc in docs)
+        tasks_result = extract_tasks(
+            question=query_text,
+            context=context,
+            username=username
+        )
         result["tasks"] = tasks_result.get("tasks", "No tasks found.")
 
     if "questions" in intents:
-        questions_result = extract_questions(input_data)
+        docs = find_similar_messages(f"questions: {query_text}", k=10)
+        context = "\n".join(doc.page_content for doc in docs)
+        questions_result = extract_questions(
+            question=query_text,
+            context=context,
+            username=username
+        )
         result["questions"] = questions_result.get("questions", "No questions found.")
 
     if "decisions" in intents:
-        decisions_result = extract_decisions(input_data)
+        docs = find_similar_messages(f"decisions: {query_text}", k=10)
+        context = "\n".join(doc.page_content for doc in docs)
+        decisions_result = extract_decisions(
+            question=query_text,
+            context=context,
+            username=username
+        )
         result["decisions"] = decisions_result.get("decisions", "No decisions found.")
 
     if "deadlines" in intents:
-        deadlines_result = extract_deadlines(input_data)
+        docs = find_similar_messages(f"deadlines: {query_text}", k=10)
+        context = "\n".join(doc.page_content for doc in docs)
+        deadlines_result = extract_deadlines(
+            question=query_text,
+            context=context,
+            username=username
+        )
         result["deadlines"] = deadlines_result.get("deadlines", "No deadlines found.")
 
     if "mentions" in intents:
-        mentions_result = extract_mentions(input_data)
+        docs = find_similar_messages(f"mentions: {query_text}", k=10)
+        context = "\n".join(doc.page_content for doc in docs)
+        mentions_result = extract_mentions(
+            question=query_text,
+            context=context,
+            username=username
+        )
         result["mentions"] = mentions_result.get("mentions", "No mentions found.")
 
-    if not result:
+    # Save the response
+    if result:
+        full_text = "\n\n".join([f"{k.upper()}:\n{v}" for k, v in result.items()])
+        save_response(query_id=query_id, response_text=full_text, timestamp=timestamp)
+    else:
         result["message"] = "Sorry, I couldn't understand what you're asking for."
 
     return result

@@ -1,7 +1,7 @@
 from chroma.vector_store import search_similar_messages
 from langchain.schema import Document
 
-def find_similar_messages(query: str, k: int = 8) -> list[Document]:
+def find_similar_messages(query: str, k: int ) -> list[Document]:
     """
     Wrapper to fetch top-k semantically similar messages for a given query.
     """
